@@ -44,7 +44,8 @@ func findProcessPath(network string, from netip.AddrPort, _ netip.AddrPort) (str
 		return "", ErrInvalidNetwork
 	}
 
-	isIPv4 := from.Addr().Is4()
+	fromUnmap := netip.AddrPortFrom(from.Addr().Unmap(), from.Port())
+	isIPv4 := fromUnmap.Addr().Is4()
 
 	value, err := syscall.Sysctl(spath)
 	if err != nil {
@@ -65,7 +66,7 @@ func findProcessPath(network string, from netip.AddrPort, _ netip.AddrPort) (str
 		inp, so := i, i+104
 
 		srcPort := binary.BigEndian.Uint16(buf[inp+18 : inp+20])
-		if from.Port() != srcPort {
+		if fromUnmap.Port() != srcPort {
 			continue
 		}
 
@@ -94,7 +95,7 @@ func findProcessPath(network string, from netip.AddrPort, _ netip.AddrPort) (str
 			continue
 		}
 
-		if from.Addr() == srcIP { // FIXME: add dstIP check
+		if fromUnmap.Addr() == srcIP { // FIXME: add dstIP check
 			// xsocket_n.so_last_pid
 			pid := readNativeUint32(buf[so+68 : so+72])
 			return getExecPathFromPID(pid)
